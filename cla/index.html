@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign CLA — CodeCoraDev</title>
+  <link rel="icon" href="https://avatars.githubusercontent.com/u/289767358?s=200&v=4" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79c0ff;
+      --success: #3fb950;
+      --danger: #f85149;
+      --warning: #d29922;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 560px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header img {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+
+    .cla-type-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .cla-type-toggle button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cla-type-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+
+    .cla-link {
+      display: block;
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      background: rgba(88, 166, 255, 0.08);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .cla-link:hover {
+      background: rgba(88, 166, 255, 0.15);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      font-size: 0.9rem;
+      color: var(--text);
+      cursor: pointer;
+      line-height: 1.5;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .signature-input {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-style: italic;
+      font-size: 1.1rem !important;
+      letter-spacing: 0.5px;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status.success {
+      background: rgba(63, 185, 80, 0.1);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      color: var(--success);
+      display: block;
+    }
+
+    .status.error {
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      color: var(--danger);
+      display: block;
+    }
+
+    .status.loading {
+      background: rgba(210, 153, 34, 0.1);
+      border: 1px solid rgba(210, 153, 34, 0.3);
+      color: var(--warning);
+      display: block;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .legal-text {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+      display: none;
+    }
+
+    .legal-text.visible {
+      display: block;
+    }
+
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .step {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .step.active { background: var(--accent); }
+    .step.done { background: var(--success); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://avatars.githubusercontent.com/u/289767358?s=200&v=4" alt="CodeCoraDev" />
+      <h1>Contributor License Agreement</h1>
+      <p>Sign once — contribute to any CodeCoraDev project</p>
+    </div>
+
+    <div class="card">
+      <div class="step-indicator">
+        <div class="step active" id="step1"></div>
+        <div class="step" id="step2"></div>
+        <div class="step" id="step3"></div>
+      </div>
+
+      <div class="cla-type-toggle">
+        <button class="active" id="btn-individual" onclick="setClaType('individual')">📋 Individual</button>
+        <button id="btn-corporate" onclick="setClaType('corporate')">🏢 Corporate</button>
+      </div>
+
+      <div class="form-group">
+        <label>GitHub Username</label>
+        <input type="text" id="github-username" placeholder="your-username" oninput="updateStep()" />
+      </div>
+
+      <div class="form-group">
+        <label>Full Legal Name</label>
+        <input type="text" id="full-name" placeholder="John Doe" oninput="updateStep()" />
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" oninput="updateStep()" />
+      </div>
+
+      <a href="#" id="cla-link" class="cla-link" target="_blank">
+        📄 Read CLA_INDIVIDUAL.md →
+      </a>
+
+      <div class="form-group">
+        <label>Type Your Full Name as Digital Signature</label>
+        <input type="text" id="signature" class="signature-input" placeholder="John Doe" oninput="updateStep()" />
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="agree" onchange="updateStep()" />
+        <label for="agree">
+          I have read and agree to the <strong id="cla-name">CLA_INDIVIDUAL.md</strong>.
+          I understand this is a legally binding agreement, not a copyright assignment.
+          I retain ownership of my contributions while granting CodeCoraDev a license to use them.
+        </label>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" disabled onclick="submitSignature()">
+        Sign CLA
+      </button>
+
+      <div class="status" id="status"></div>
+
+      <div class="legal-text" id="legal-text">
+        <strong>Legal Information:</strong><br/>
+        This digital signature is binding under the U.S. Electronic Signatures in Global and National
+        Commerce Act (E-SIGN) and the Uniform Electronic Transactions Act (UETA). Your signature
+        will be recorded with a timestamp in the CodeCoraDev CLA signatures database
+        (<code>.cla/signatures.json</code>) on our public GitHub repository.
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        Questions? <a href="https://github.com/codecoradev/.github/discussions">Ask in Discussions</a><br/>
+        Powered by <a href="https://github.com/codecoradev">CodeCoraDev</a> · Apache-2.0
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let claType = 'individual';
+
+    function setClaType(type) {
+      claType = type;
+      document.getElementById('btn-individual').classList.toggle('active', type === 'individual');
+      document.getElementById('btn-corporate').classList.toggle('active', type === 'corporate');
+
+      const link = document.getElementById('cla-link');
+      const name = document.getElementById('cla-name');
+      if (type === 'individual') {
+        link.href = 'https://github.com/codecoradev/.github/blob/main/CLA_INDIVIDUAL.md';
+        link.innerHTML = '📄 Read CLA_INDIVIDUAL.md →';
+        name.textContent = 'CLA_INDIVIDUAL.md';
+      } else {
+        link.href = 'https://github.com/codecoradev/.github/blob/main/CLA_CORPORATE.md';
+        link.innerHTML = '📄 Read CLA_CORPORATE.md →';
+        name.textContent = 'CLA_CORPORATE.md';
+      }
+    }
+
+    function updateStep() {
+      const username = document.getElementById('github-username').value.trim();
+      const name = document.getElementById('full-name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const signature = document.getElementById('signature').value.trim();
+      const agreed = document.getElementById('agree').checked;
+
+      // Step 1: identity
+      const step1Done = username && name && email;
+      document.getElementById('step1').className = 'step ' + (step1Done ? 'done' : 'active');
+
+      // Step 2: signature matches name
+      const step2Done = step1Done && signature === name;
+      document.getElementById('step2').className = 'step ' + (step2Done ? 'done' : (step1Done ? 'active' : ''));
+
+      // Step 3: agreed
+      const step3Done = step2Done && agreed;
+      document.getElementById('step3').className = 'step ' + (step3Done ? 'done' : (step2Done ? 'active' : ''));
+
+      // Enable submit
+      document.getElementById('submit-btn').disabled = !step3Done;
+
+      // Show legal text when typing signature
+      document.getElementById('legal-text').classList.toggle('visible', signature.length > 0);
+    }
+
+    async function submitSignature() {
+      const status = document.getElementById('status');
+      const btn = document.getElementById('submit-btn');
+
+      const data = {
+        github_username: document.getElementById('github-username').value.trim(),
+        name: document.getElementById('full-name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        signature: document.getElementById('signature').value.trim(),
+        cla_type: claType,
+      };
+
+      btn.disabled = true;
+      status.className = 'status loading';
+      status.textContent = 'Submitting your signature...';
+
+      try {
+        // Submit to GitHub API via a proxy or direct commit
+        // Phase 1: redirect to a pre-filled issue/PR
+        const repoUrl = 'https://github.com/codecoradev/.github';
+        const issueTitle = `[CLA] Signature: @${data.github_username}`;
+        const issueBody = encodeURIComponent(
+          `## CLA Signature\n\n` +
+          `- **Name:** ${data.name}\n` +
+          `- **GitHub:** @${data.github_username}\n` +
+          `- **Email:** ${data.email}\n` +
+          `- **CLA Type:** ${data.cla_type}\n` +
+          `- **Signature:** ${data.signature}\n` +
+          `- **Timestamp:** ${new Date().toISOString()}\n\n` +
+          `By submitting this, I agree to the terms of CLA_${data.cla_type === 'individual' ? 'INDIVIDUAL' : 'CORPORATE'}.md.\n` +
+          `My typed name constitutes a legally binding digital signature.`
+        );
+
+        window.location.href = `${repoUrl}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${issueBody}`;
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `Error: ${err.message}. Please try again or contact us.`;
+        btn.disabled = false;
+      }
+    }
+
+    // Auto-fill from URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type')) setClaType(params.get('type'));
+    if (params.get('username')) document.getElementById('github-username').value = params.get('username');
+  </script>
+</body>
+</html>
