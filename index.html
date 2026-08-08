@@ -406,35 +406,37 @@
       status.className = 'status loading';
       status.textContent = 'Submitting your signature...';
 
-      try {
-        // Submit to GitHub API via a proxy or direct commit
-        // Phase 1: redirect to a pre-filled issue/PR
-        const repoUrl = 'https://github.com/codecoradev/.github';
-        const issueTitle = `[CLA] Signature: @${data.github_username}`;
-        const issueBody = encodeURIComponent(
-          `## CLA Signature\n\n` +
-          `- **Name:** ${data.name}\n` +
-          `- **GitHub:** @${data.github_username}\n` +
-          `- **Email:** ${data.email}\n` +
-          `- **CLA Type:** ${data.cla_type}\n` +
-          `- **Signature:** ${data.signature}\n` +
-          `- **Timestamp:** ${new Date().toISOString()}\n\n` +
-          `By submitting this, I agree to the terms of CLA_${data.cla_type === 'individual' ? 'INDIVIDUAL' : 'CORPORATE'}.md.\n` +
-          `My typed name constitutes a legally binding digital signature.`
-        );
+      // Redirect to GitHub issue with pre-filled CLA signature.
+      // No try/catch — window.location.href is fire-and-forget navigation,
+      // errors from it cannot be caught synchronously.
+      const repoUrl = 'https://github.com/codecoradev/.github';
+      const claFile = data.cla_type === 'individual' ? 'INDIVIDUAL' : 'CORPORATE';
+      const issueTitle = `[CLA] Signature: @${data.github_username}`;
+      const issueBody = encodeURIComponent(
+        `## CLA Signature\n\n` +
+        `- **Name:** ${data.name}\n` +
+        `- **GitHub:** @${data.github_username}\n` +
+        `- **Email:** ${data.email}\n` +
+        `- **CLA Type:** ${data.cla_type}\n` +
+        `- **Signature:** ${data.signature}\n` +
+        `- **Timestamp:** ${new Date().toISOString()}\n\n` +
+        `By submitting this, I agree to the terms of CLA_${claFile}.md.\n` +
+        `My typed name constitutes a legally binding digital signature.`
+      );
 
-        window.location.href = `${repoUrl}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${issueBody}`;
-      } catch (err) {
-        status.className = 'status error';
-        status.textContent = `Error: ${err.message}. Please try again or contact us.`;
-        btn.disabled = false;
-      }
+      status.className = 'status success';
+      status.textContent = 'Redirecting to GitHub...';
+      window.location.href = `${repoUrl}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${issueBody}`;
     }
 
-    // Auto-fill from URL params
+    // Auto-fill from URL params (whitelist-validated)
     const params = new URLSearchParams(window.location.search);
-    if (params.get('type')) setClaType(params.get('type'));
-    if (params.get('username')) document.getElementById('github-username').value = params.get('username');
+    const paramType = params.get('type');
+    if (paramType === 'individual' || paramType === 'corporate') setClaType(paramType);
+    const paramUser = params.get('username');
+    if (paramUser && /^[a-zA-Z0-9-]{1,39}$/.test(paramUser)) {
+      document.getElementById('github-username').value = paramUser;
+    }
   </script>
 </body>
 </html>
