@@ -297,11 +297,6 @@
         <input type="text" id="full-name" placeholder="John Doe" oninput="updateStep()" />
       </div>
 
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="email" placeholder="you@example.com" oninput="updateStep()" />
-      </div>
-
       <a href="#" id="cla-link" class="cla-link" target="_blank">
         📄 Read CLA_INDIVIDUAL.md →
       </a>
@@ -372,7 +367,7 @@
       const agreed = document.getElementById('agree').checked;
 
       // Step 1: identity
-      const step1Done = username && name && email;
+      const step1Done = username && name;
       document.getElementById('step1').className = 'step ' + (step1Done ? 'done' : 'active');
 
       // Step 2: signature matches name
@@ -397,7 +392,6 @@
       const data = {
         github_username: document.getElementById('github-username').value.trim(),
         name: document.getElementById('full-name').value.trim(),
-        email: document.getElementById('email').value.trim(),
         signature: document.getElementById('signature').value.trim(),
         cla_type: claType,
       };
@@ -416,7 +410,6 @@
         `## CLA Signature\n\n` +
         `- **Name:** ${data.name}\n` +
         `- **GitHub:** @${data.github_username}\n` +
-        `- **Email:** ${data.email}\n` +
         `- **CLA Type:** ${data.cla_type}\n` +
         `- **Signature:** ${data.signature}\n` +
         `- **Timestamp:** ${new Date().toISOString()}\n\n` +
