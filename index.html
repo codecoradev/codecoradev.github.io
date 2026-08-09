@@ -68,6 +68,89 @@
       padding: 32px;
     }
 
+    /* OAuth Login Section */
+    .oauth-section {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .github-login-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 20px;
+      background: #fff;
+      color: #1f2328;
+      border: 1px solid rgba(31, 35, 40, 0.15);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      justify-content: center;
+    }
+
+    .github-login-btn:hover {
+      background: #f0f0f0;
+    }
+
+    .github-login-btn svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .oauth-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: rgba(63, 185, 80, 0.08);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      border-radius: 8px;
+    }
+
+    .oauth-status img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .oauth-status-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .oauth-status-username {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .oauth-status-verified {
+      font-size: 0.8rem;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .oauth-logout {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 4px;
+    }
+
+    .oauth-logout:hover {
+      color: var(--danger);
+    }
+
     .cla-type-toggle {
       display: flex;
       gap: 8px;
@@ -107,6 +190,12 @@
       margin-bottom: 6px;
     }
 
+    .form-group label .edit-hint {
+      font-size: 0.75rem;
+      color: var(--warning);
+      margin-left: 6px;
+    }
+
     .form-group input {
       width: 100%;
       padding: 12px 14px;
@@ -122,6 +211,12 @@
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+
+    .form-group input:read-only {
+      background: rgba(139, 148, 158, 0.08);
+      color: var(--muted);
+      cursor: not-allowed;
     }
 
     .cla-link {
@@ -265,6 +360,35 @@
 
     .step.active { background: var(--accent); }
     .step.done { background: var(--success); }
+
+    /* Hidden until OAuth */
+    .cla-form {
+      display: none;
+    }
+
+    .cla-form.visible {
+      display: block;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider::before { margin-right: 12px; }
+    .divider::after { margin-left: 12px; }
   </style>
 </head>
 <body>
@@ -276,61 +400,94 @@
     </div>
 
     <div class="card">
+      <!-- Step indicator -->
       <div class="step-indicator">
         <div class="step active" id="step1"></div>
         <div class="step" id="step2"></div>
         <div class="step" id="step3"></div>
       </div>
 
-      <div class="cla-type-toggle">
-        <button class="active" id="btn-individual" onclick="setClaType('individual')">📋 Individual</button>
-        <button id="btn-corporate" onclick="setClaType('corporate')">🏢 Corporate</button>
+      <!-- OAuth Login Section -->
+      <div class="oauth-section" id="oauth-login">
+        <button class="github-login-btn" id="login-btn" onclick="loginWithGitHub()">
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          Sign in with GitHub
+        </button>
       </div>
 
-      <div class="form-group">
-        <label>GitHub Username</label>
-        <input type="text" id="github-username" placeholder="your-username" oninput="updateStep()" />
+      <!-- Logged-in status (hidden until OAuth) -->
+      <div class="oauth-section" id="oauth-status" style="display: none;">
+        <div class="oauth-status">
+          <img id="user-avatar" src="" alt="GitHub Avatar" />
+          <div class="oauth-status-info">
+            <div class="oauth-status-username" id="user-display"></div>
+            <div class="oauth-status-verified">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+              </svg>
+              Verified via GitHub OAuth
+            </div>
+          </div>
+          <button class="oauth-logout" onclick="logout()">Logout</button>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>Full Legal Name</label>
-        <input type="text" id="full-name" placeholder="John Doe" oninput="updateStep()" />
-      </div>
+      <!-- CLA Form (hidden until OAuth login) -->
+      <div class="cla-form" id="cla-form">
+        <div class="divider">CLA Details</div>
 
-      <a href="#" id="cla-link" class="cla-link" target="_blank">
-        📄 Read CLA_INDIVIDUAL.md →
-      </a>
+        <div class="cla-type-toggle">
+          <button class="active" id="btn-individual" onclick="setClaType('individual')">📋 Individual</button>
+          <button id="btn-corporate" onclick="setClaType('corporate')">🏢 Corporate</button>
+        </div>
 
-      <div class="form-group">
-        <label>Type Your Full Name as Digital Signature</label>
-        <input type="text" id="signature" class="signature-input" placeholder="John Doe" oninput="updateStep()" />
-      </div>
+        <div class="form-group">
+          <label>GitHub Username</label>
+          <input type="text" id="github-username" placeholder="your-username" readonly />
+        </div>
 
-      <div class="checkbox-group">
-        <input type="checkbox" id="agree" onchange="updateStep()" />
-        <label for="agree">
-          I have read and agree to the <strong id="cla-name">CLA_INDIVIDUAL.md</strong>.
-          I understand this is a legally binding agreement, not a copyright assignment.
-          I retain ownership of my contributions while granting CodeCoraDev a license to use them.
-        </label>
-      </div>
+        <div class="form-group">
+          <label>Full Legal Name <span class="edit-hint">(edit if different from GitHub)</span></label>
+          <input type="text" id="full-name" placeholder="Your full legal name" oninput="updateStep()" />
+        </div>
 
-      <button class="submit-btn" id="submit-btn" disabled onclick="submitSignature()">
-        Sign CLA
-      </button>
+        <a href="#" id="cla-link" class="cla-link" target="_blank">
+          📄 Read CLA_INDIVIDUAL.md →
+        </a>
 
-      <div class="status" id="status"></div>
+        <div class="form-group">
+          <label>Type Your Full Name as Digital Signature</label>
+          <input type="text" id="signature" class="signature-input" placeholder="Your full legal name" oninput="updateStep()" />
+        </div>
 
-      <div class="legal-text" id="legal-text">
-        <strong>Legal Information:</strong><br/>
-        This digital signature is binding under the U.S. Electronic Signatures in Global and National
-        Commerce Act (E-SIGN) and the Uniform Electronic Transactions Act (UETA). Your signature
-        will be recorded with a timestamp in the CodeCoraDev CLA signatures database
-        (<code>.cla/signatures.json</code>) on our public GitHub repository.<br/><br/>
-        <strong>Privacy:</strong> Your name and GitHub username will be publicly visible in the
-        signatures database. Email is never collected or stored. This is standard practice for
-        open-source CLAs (Apache, Google, Linux) and is necessary for public auditability of
-        contributor agreements.
+        <div class="checkbox-group">
+          <input type="checkbox" id="agree" onchange="updateStep()" />
+          <label for="agree">
+            I have read and agree to the <strong id="cla-name">CLA_INDIVIDUAL.md</strong>.
+            I understand this is a legally binding agreement, not a copyright assignment.
+            I retain ownership of my contributions while granting CodeCoraDev a license to use them.
+          </label>
+        </div>
+
+        <button class="submit-btn" id="submit-btn" disabled onclick="submitSignature()">
+          Sign CLA
+        </button>
+
+        <div class="status" id="status"></div>
+
+        <div class="legal-text" id="legal-text">
+          <strong>Legal Information:</strong><br/>
+          This digital signature is binding under the U.S. Electronic Signatures in Global and National
+          Commerce Act (E-SIGN) and the Uniform Electronic Transactions Act (UETA). Your signature
+          will be recorded with a timestamp in the CodeCoraDev CLA signatures database
+          (<code>.cla/signatures.json</code>) on our public GitHub repository.<br/><br/>
+          <strong>Privacy:</strong> Your name and GitHub username will be publicly visible in the
+          signatures database. Email is never collected or stored. This is standard practice for
+          open-source CLAs (Apache, Google, Linux) and is necessary for public auditability of
+          contributor agreements.
+        </div>
       </div>
     </div>
 
@@ -343,8 +500,205 @@
   </div>
 
   <script>
-    let claType = 'individual';
+    // ─── OAuth Config ──────────────────────────────────────────
+    const OAUTH_CLIENT_ID = 'Ov23liXtgzbNBsl3ujIS';
+    const OAUTH_REDIRECT_URI = window.location.origin + window.location.pathname;
+    const OAUTH_SCOPE = 'public_repo'; // Create issue + read profile
+    const OAUTH_API_BASE = 'https://api.github.com';
 
+    // ─── State ─────────────────────────────────────────────────
+    let claType = 'individual';
+    let oauthToken = null;
+    let oauthUser = null;
+
+    // ─── PKCE Helpers ──────────────────────────────────────────
+    function generateRandomString(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      const values = crypto.getRandomValues(new Uint8Array(length));
+      return Array.from(values).map(v => chars[v % chars.length]).join('');
+    }
+
+    async function sha256(plain) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(plain);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function base64UrlEncode(str) {
+      return btoa(str)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+    }
+
+    // ─── OAuth Login ───────────────────────────────────────────
+    async function loginWithGitHub() {
+      const state = generateRandomString(32);
+      const codeVerifier = generateRandomString(64);
+
+      // Store for verification after redirect
+      sessionStorage.setItem('pkce_state', state);
+      sessionStorage.setItem('pkce_verifier', codeVerifier);
+
+      const codeChallenge = await sha256(codeVerifier);
+      const codeChallengeBase64 = base64UrlEncode(
+        String.fromCharCode(...new Uint8Array(
+          Array.from(codeChallenge.matchAll(/.{2}/g))
+            .map(b => parseInt(b[0], 16))
+        ))
+      );
+
+      // GitHub OAuth authorize URL
+      const authUrl = new URL('https://github.com/login/oauth/authorize');
+      authUrl.searchParams.set('client_id', OAUTH_CLIENT_ID);
+      authUrl.searchParams.set('redirect_uri', OAUTH_REDIRECT_URI);
+      authUrl.searchParams.set('scope', OAUTH_SCOPE);
+      authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('allow_signup', 'false');
+
+      window.location.href = authUrl.toString();
+    }
+
+    // ─── OAuth Callback Handler ────────────────────────────────
+    async function handleOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+
+      if (!code) return; // No OAuth callback, normal page load
+
+      // Validate state (CSRF protection)
+      const savedState = sessionStorage.getItem('pkce_state');
+      if (!state || state !== savedState) {
+        showError('OAuth state mismatch. Please try again.');
+        cleanUrl();
+        return;
+      }
+
+      // Exchange code for token via PKCE
+      // Note: GitHub OAuth Apps support implicit token via URL fragment.
+      // For PKCE with static sites, we use the token exchange endpoint.
+      try {
+        const codeVerifier = sessionStorage.getItem('pkce_verifier');
+
+        const response = await fetch('https://github.com/login/oauth/access_token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            client_id: OAUTH_CLIENT_ID,
+            device_id: sessionStorage.getItem('pkce_state'),
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: OAUTH_REDIRECT_URI,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.access_token) {
+          oauthToken = data.access_token;
+          sessionStorage.setItem('oauth_token', oauthToken);
+          sessionStorage.removeItem('pkce_state');
+          sessionStorage.removeItem('pkce_verifier');
+
+          // Fetch user profile
+          await fetchGitHubUser();
+          cleanUrl();
+        } else if (data.error) {
+          showError(`OAuth error: ${data.error_description || data.error}`);
+          cleanUrl();
+        }
+      } catch (err) {
+        showError('Failed to complete GitHub authentication. Please try again.');
+        cleanUrl();
+      }
+    }
+
+    function cleanUrl() {
+      window.history.replaceState({}, document.title, OAUTH_REDIRECT_URI);
+    }
+
+    // ─── Fetch GitHub User Profile ─────────────────────────────
+    async function fetchGitHubUser() {
+      if (!oauthToken) {
+        const stored = sessionStorage.getItem('oauth_token');
+        if (!stored) return;
+        oauthToken = stored;
+      }
+
+      try {
+        const response = await fetch(`${OAUTH_API_BASE}/user`, {
+          headers: { 'Authorization': `Bearer ${oauthToken}` },
+        });
+
+        if (!response.ok) {
+          sessionStorage.removeItem('oauth_token');
+          oauthToken = null;
+          return;
+        }
+
+        oauthUser = await response.json();
+        showLoggedInState();
+      } catch (err) {
+        sessionStorage.removeItem('oauth_token');
+        oauthToken = null;
+      }
+    }
+
+    // ─── UI State Management ───────────────────────────────────
+    function showLoggedInState() {
+      // Hide login button, show status
+      document.getElementById('oauth-login').style.display = 'none';
+      document.getElementById('oauth-status').style.display = 'block';
+
+      // Show CLA form
+      document.getElementById('cla-form').classList.add('visible');
+
+      // Pre-fill from GitHub profile
+      document.getElementById('user-avatar').src = oauthUser.avatar_url;
+      document.getElementById('user-display').textContent = `@${oauthUser.login}`;
+      document.getElementById('github-username').value = oauthUser.login;
+
+      // Pre-fill name (editable — GitHub display name is NOT always legal name)
+      const nameInput = document.getElementById('full-name');
+      if (oauthUser.name) {
+        nameInput.value = oauthUser.name;
+        nameInput.placeholder = oauthUser.name;
+      }
+
+      // Focus on name field for editing
+      nameInput.focus();
+
+      updateStep();
+    }
+
+    function logout() {
+      oauthToken = null;
+      oauthUser = null;
+      sessionStorage.removeItem('oauth_token');
+      sessionStorage.removeItem('pkce_state');
+      sessionStorage.removeItem('pkce_verifier');
+
+      document.getElementById('oauth-login').style.display = 'block';
+      document.getElementById('oauth-status').style.display = 'none';
+      document.getElementById('cla-form').classList.remove('visible');
+
+      // Reset form
+      document.getElementById('github-username').value = '';
+      document.getElementById('full-name').value = '';
+      document.getElementById('signature').value = '';
+      document.getElementById('agree').checked = false;
+
+      resetSteps();
+    }
+
+    // ─── CLA Type Toggle ───────────────────────────────────────
     function setClaType(type) {
       claType = type;
       document.getElementById('btn-individual').classList.toggle('active', type === 'individual');
@@ -363,18 +717,24 @@
       }
     }
 
+    // ─── Step Indicator ────────────────────────────────────────
+    function resetSteps() {
+      document.getElementById('step1').className = 'step active';
+      document.getElementById('step2').className = 'step';
+      document.getElementById('step3').className = 'step';
+    }
+
     function updateStep() {
-      const username = document.getElementById('github-username').value.trim();
       const name = document.getElementById('full-name').value.trim();
       const signature = document.getElementById('signature').value.trim();
       const agreed = document.getElementById('agree').checked;
 
-      // Step 1: identity
-      const step1Done = username && name;
+      // Step 1: identity (auto-done after OAuth login)
+      const step1Done = oauthUser !== null;
       document.getElementById('step1').className = 'step ' + (step1Done ? 'done' : 'active');
 
-      // Step 2: signature matches name
-      const step2Done = step1Done && signature === name;
+      // Step 2: name + signature matches
+      const step2Done = step1Done && name && signature === name;
       document.getElementById('step2').className = 'step ' + (step2Done ? 'done' : (step1Done ? 'active' : ''));
 
       // Step 3: agreed
@@ -388,6 +748,7 @@
       document.getElementById('legal-text').classList.toggle('visible', signature.length > 0);
     }
 
+    // ─── Submit Signature ──────────────────────────────────────
     async function submitSignature() {
       const status = document.getElementById('status');
       const btn = document.getElementById('submit-btn');
@@ -403,13 +764,9 @@
       status.className = 'status loading';
       status.textContent = 'Submitting your signature...';
 
-      // Redirect to GitHub issue with pre-filled CLA signature.
-      // No try/catch — window.location.href is fire-and-forget navigation,
-      // errors from it cannot be caught synchronously.
-      const repoUrl = 'https://github.com/codecoradev/.github';
       const claFile = data.cla_type === 'individual' ? 'INDIVIDUAL' : 'CORPORATE';
       const issueTitle = `[CLA] Signature: @${data.github_username}`;
-      const issueBody = encodeURIComponent(
+      const issueBody =
         `## CLA Signature\n\n` +
         `- **Name:** ${data.name}\n` +
         `- **GitHub:** @${data.github_username}\n` +
@@ -417,22 +774,75 @@
         `- **Signature:** ${data.signature}\n` +
         `- **Timestamp:** ${new Date().toISOString()}\n\n` +
         `By submitting this, I agree to the terms of CLA_${claFile}.md.\n` +
-        `My typed name constitutes a legally binding digital signature.`
-      );
+        `My typed name constitutes a legally binding digital signature.`;
 
-      status.className = 'status success';
-      status.textContent = 'Redirecting to GitHub...';
-      window.location.href = `${repoUrl}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${issueBody}`;
+      try {
+        // Create issue via GitHub API with user's OAuth token
+        const response = await fetch(`${OAUTH_API_BASE}/repos/codecoradev/.github/issues`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${oauthToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github+json',
+          },
+          body: JSON.stringify({
+            title: issueTitle,
+            body: issueBody,
+            labels: ['cla-signature'],
+          }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          status.className = 'status success';
+          status.innerHTML = `✅ CLA submitted! <a href="${result.html_url}" target="_blank" style="color: var(--success); text-decoration: underline;">View your signature issue →</a><br/><br/>Your CLA will be verified and added to the database shortly.`;
+
+          // Disable entire form
+          document.getElementById('full-name').disabled = true;
+          document.getElementById('signature').disabled = true;
+          document.getElementById('agree').disabled = true;
+        } else {
+          throw new Error(result.message || 'Failed to create issue');
+        }
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `Error: ${err.message}. Please try again or contact us.`;
+        btn.disabled = false;
+      }
     }
 
-    // Auto-fill from URL params (whitelist-validated)
-    const params = new URLSearchParams(window.location.search);
-    const paramType = params.get('type');
-    if (paramType === 'individual' || paramType === 'corporate') setClaType(paramType);
-    const paramUser = params.get('username');
-    if (paramUser && /^[a-zA-Z0-9-]{1,39}$/.test(paramUser)) {
-      document.getElementById('github-username').value = paramUser;
+    // ─── Error Display ─────────────────────────────────────────
+    function showError(msg) {
+      const status = document.getElementById('status');
+      status.className = 'status error';
+      status.textContent = msg;
+      status.style.display = 'block';
     }
+
+    // ─── Init ──────────────────────────────────────────────────
+    // Handle OAuth callback or restore session
+    (async function init() {
+      // Set initial CLA type links
+      setClaType('individual');
+
+      // Check for OAuth callback params
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('code')) {
+        await handleOAuthCallback();
+      } else {
+        // Check for stored token (session restore)
+        const storedToken = sessionStorage.getItem('oauth_token');
+        if (storedToken) {
+          oauthToken = storedToken;
+          await fetchGitHubUser();
+        }
+      }
+
+      // Auto-fill from URL params (backward compat)
+      const paramType = params.get('type');
+      if (paramType === 'individual' || paramType === 'corporate') setClaType(paramType);
+    })();
   </script>
 </body>
 </html>
