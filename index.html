@@ -579,11 +579,107 @@
         }
 
         oauthUser = await response.json();
-        showLoggedInState();
+
+        // Check if user already signed the CLA
+        const existing = await checkExistingSignature(oauthUser.login);
+        if (existing) {
+          showAlreadySignedState(existing);
+        } else {
+          showLoggedInState();
+        }
       } catch (err) {
         sessionStorage.removeItem('oauth_token');
         oauthToken = null;
       }
+    }
+
+    // ─── Check Existing Signature ──────────────────────────────
+    async function checkExistingSignature(username) {
+      try {
+        const response = await fetch(
+          'https://raw.githubusercontent.com/codecoradev/.github/main/.cla/signatures.json'
+        );
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const found = data.signatures?.find(
+          (s) => s.github_username.toLowerCase() === username.toLowerCase()
+        );
+        return found || null;
+      } catch (err) {
+        // If we can't check, allow signing (fail-open)
+        console.warn('Could not check existing signatures:', err);
+        return null;
+      }
+    }
+
+    // ─── Already Signed State ──────────────────────────────────
+    function showAlreadySignedState(signature) {
+      document.getElementById('oauth-login').style.display = 'none';
+      document.getElementById('oauth-status').style.display = 'block';
+      document.getElementById('cla-form').classList.remove('visible');
+
+      // Show user identity
+      document.getElementById('user-avatar').src = oauthUser.avatar_url;
+      document.getElementById('user-display').textContent = `@${oauthUser.login}`;
+
+      // Hide CLA form, show "already signed" panel
+      const card = document.querySelector('.card');
+      let alreadyPanel = document.getElementById('already-signed');
+
+      // Build panel if not exists
+      if (!alreadyPanel) {
+        alreadyPanel = document.createElement('div');
+        alreadyPanel.id = 'already-signed';
+        card.appendChild(alreadyPanel);
+      }
+
+      const signedDate = new Date(signature.signed_at).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      alreadyPanel.innerHTML = `
+        <div style="text-align: center; padding: 24px 0;">
+          <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: rgba(63, 185, 80, 0.1); border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <svg width="32" height="32" viewBox="0 0 16 16" fill="var(--success)">
+              <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+            </svg>
+          </div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 8px;">CLA Already Signed ✅</h2>
+          <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 24px;">
+            You signed the <strong>${signature.cla_type}</strong> CLA on <strong>${signedDate}</strong>.
+          </p>
+          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: left; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: var(--muted); font-size: 0.85rem;">Name</span>
+              <span style="font-size: 0.85rem;">${signature.name}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: var(--muted); font-size: 0.85rem;">GitHub</span>
+              <span style="font-size: 0.85rem;">@${signature.github_username}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--muted); font-size: 0.85rem;">CLA Type</span>
+              <span style="font-size: 0.85rem; text-transform: capitalize;">${signature.cla_type}</span>
+            </div>
+          </div>
+          <p style="color: var(--muted); font-size: 0.8rem;">
+            You're all set! No further action needed.<br/>
+            Your contributions to CodeCoraDev projects are covered.
+          </p>
+          <div style="margin-top: 20px;">
+            <a href="https://github.com/codecoradev/.github/blob/main/.cla/signatures.json" target="_blank"
+               style="color: var(--accent); font-size: 0.85rem; text-decoration: none;">
+              View signatures database →
+            </a>
+          </div>
+        </div>
+      `;
+
+      // Mark all steps as done
+      document.getElementById('step1').className = 'step done';
+      document.getElementById('step2').className = 'step done';
+      document.getElementById('step3').className = 'step done';
     }
 
     // ─── UI State Management ───────────────────────────────────
@@ -591,6 +687,10 @@
       document.getElementById('oauth-login').style.display = 'none';
       document.getElementById('oauth-status').style.display = 'block';
       document.getElementById('cla-form').classList.add('visible');
+
+      // Remove "already signed" panel if exists (e.g., after logout)
+      const alreadyPanel = document.getElementById('already-signed');
+      if (alreadyPanel) alreadyPanel.remove();
 
       // Auto-fill from GitHub profile
       document.getElementById('user-avatar').src = oauthUser.avatar_url;
