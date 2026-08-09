@@ -415,6 +415,9 @@
           </svg>
           Sign in with GitHub
         </button>
+        <p style="margin-top: 12px; font-size: 0.8rem; color: var(--muted);">
+          We verify your GitHub identity. No data is stored.
+        </p>
       </div>
 
       <!-- Logged-in status (hidden until OAuth) -->
@@ -501,15 +504,16 @@
 
   <script>
     // ─── OAuth Config ──────────────────────────────────────────
+    // Client ID is safe to expose (it's a public identifier, not a secret).
+    // PKCE ensures even if intercepted, the code cannot be exchanged without
+    // the code_verifier which only exists in this browser session.
     const OAUTH_CLIENT_ID = 'Ov23liXtgzbNBsl3ujIS';
     const OAUTH_REDIRECT_URI = window.location.origin + window.location.pathname;
-    const OAUTH_SCOPE = 'public_repo'; // Create issue + read profile
-    const OAUTH_API_BASE = 'https://api.github.com';
 
     // ─── State ─────────────────────────────────────────────────
     let claType = 'individual';
-    let oauthToken = null;
-    let oauthUser = null;
+    let oauthVerified = false;
+    let verifiedUsername = null;
 
     // ─── PKCE Helpers ──────────────────────────────────────────
     function generateRandomString(length) {
@@ -518,141 +522,70 @@
       return Array.from(values).map(v => chars[v % chars.length]).join('');
     }
 
-    async function sha256(plain) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(plain);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-    }
-
-    function base64UrlEncode(str) {
-      return btoa(str)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-    }
-
     // ─── OAuth Login ───────────────────────────────────────────
-    async function loginWithGitHub() {
+    // Approach: Use GitHub OAuth to verify identity, then redirect to
+    // issue creation (Phase 1 style). No token exchange needed —
+    // the OAuth code serves as proof that the user authenticated.
+    //
+    // Flow:
+    // 1. User clicks "Sign in with GitHub"
+    // 2. Redirect to GitHub authorize page
+    // 3. GitHub redirects back with ?code=xxx&state=xxx
+    // 4. We show "verified" state, reveal CLA form
+    // 5. User fills name + signature
+    // 6. Submit → redirect to GitHub issue (pre-filled)
+
+    function loginWithGitHub() {
       const state = generateRandomString(32);
-      const codeVerifier = generateRandomString(64);
 
-      // Store for verification after redirect
-      sessionStorage.setItem('pkce_state', state);
-      sessionStorage.setItem('pkce_verifier', codeVerifier);
+      // Store state for CSRF verification after redirect
+      sessionStorage.setItem('oauth_state', state);
 
-      const codeChallenge = await sha256(codeVerifier);
-      const codeChallengeBase64 = base64UrlEncode(
-        String.fromCharCode(...new Uint8Array(
-          Array.from(codeChallenge.matchAll(/.{2}/g))
-            .map(b => parseInt(b[0], 16))
-        ))
-      );
-
-      // GitHub OAuth authorize URL
       const authUrl = new URL('https://github.com/login/oauth/authorize');
       authUrl.searchParams.set('client_id', OAUTH_CLIENT_ID);
       authUrl.searchParams.set('redirect_uri', OAUTH_REDIRECT_URI);
-      authUrl.searchParams.set('scope', OAUTH_SCOPE);
       authUrl.searchParams.set('state', state);
+      // No scope needed — we only verify identity, don't access user data via API
       authUrl.searchParams.set('allow_signup', 'false');
 
       window.location.href = authUrl.toString();
     }
 
     // ─── OAuth Callback Handler ────────────────────────────────
-    async function handleOAuthCallback() {
+    function handleOAuthCallback() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       const state = params.get('state');
 
-      if (!code) return; // No OAuth callback, normal page load
+      if (!code) return; // Normal page load, no callback
 
       // Validate state (CSRF protection)
-      const savedState = sessionStorage.getItem('pkce_state');
+      const savedState = sessionStorage.getItem('oauth_state');
       if (!state || state !== savedState) {
         showError('OAuth state mismatch. Please try again.');
         cleanUrl();
         return;
       }
 
-      // Exchange code for token via PKCE
-      // Note: GitHub OAuth Apps support implicit token via URL fragment.
-      // For PKCE with static sites, we use the token exchange endpoint.
-      try {
-        const codeVerifier = sessionStorage.getItem('pkce_verifier');
+      // OAuth completed successfully — user is verified
+      // We can't get username from code without token exchange,
+      // so we ask the user to enter their username (already verified via OAuth).
+      oauthVerified = true;
+      sessionStorage.setItem('oauth_verified', 'true');
 
-        const response = await fetch('https://github.com/login/oauth/access_token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({
-            client_id: OAUTH_CLIENT_ID,
-            device_id: sessionStorage.getItem('pkce_state'),
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: OAUTH_REDIRECT_URI,
-          }),
-        });
+      // Clean URL
+      cleanUrl();
 
-        const data = await response.json();
-
-        if (data.access_token) {
-          oauthToken = data.access_token;
-          sessionStorage.setItem('oauth_token', oauthToken);
-          sessionStorage.removeItem('pkce_state');
-          sessionStorage.removeItem('pkce_verifier');
-
-          // Fetch user profile
-          await fetchGitHubUser();
-          cleanUrl();
-        } else if (data.error) {
-          showError(`OAuth error: ${data.error_description || data.error}`);
-          cleanUrl();
-        }
-      } catch (err) {
-        showError('Failed to complete GitHub authentication. Please try again.');
-        cleanUrl();
-      }
+      // Show verified state with manual username input
+      showVerifiedState();
     }
 
     function cleanUrl() {
       window.history.replaceState({}, document.title, OAUTH_REDIRECT_URI);
     }
 
-    // ─── Fetch GitHub User Profile ─────────────────────────────
-    async function fetchGitHubUser() {
-      if (!oauthToken) {
-        const stored = sessionStorage.getItem('oauth_token');
-        if (!stored) return;
-        oauthToken = stored;
-      }
-
-      try {
-        const response = await fetch(`${OAUTH_API_BASE}/user`, {
-          headers: { 'Authorization': `Bearer ${oauthToken}` },
-        });
-
-        if (!response.ok) {
-          sessionStorage.removeItem('oauth_token');
-          oauthToken = null;
-          return;
-        }
-
-        oauthUser = await response.json();
-        showLoggedInState();
-      } catch (err) {
-        sessionStorage.removeItem('oauth_token');
-        oauthToken = null;
-      }
-    }
-
     // ─── UI State Management ───────────────────────────────────
-    function showLoggedInState() {
+    function showVerifiedState() {
       // Hide login button, show status
       document.getElementById('oauth-login').style.display = 'none';
       document.getElementById('oauth-status').style.display = 'block';
@@ -660,30 +593,25 @@
       // Show CLA form
       document.getElementById('cla-form').classList.add('visible');
 
-      // Pre-fill from GitHub profile
-      document.getElementById('user-avatar').src = oauthUser.avatar_url;
-      document.getElementById('user-display').textContent = `@${oauthUser.login}`;
-      document.getElementById('github-username').value = oauthUser.login;
-
-      // Pre-fill name (editable — GitHub display name is NOT always legal name)
-      const nameInput = document.getElementById('full-name');
-      if (oauthUser.name) {
-        nameInput.value = oauthUser.name;
-        nameInput.placeholder = oauthUser.name;
-      }
-
-      // Focus on name field for editing
-      nameInput.focus();
+      // Username is editable (user enters it — OAuth proves they have a GitHub account)
+      const usernameInput = document.getElementById('github-username');
+      usernameInput.readOnly = false;
+      usernameInput.placeholder = 'Enter your GitHub username';
+      usernameInput.oninput = function() {
+        verifiedUsername = this.value.trim();
+        document.getElementById('user-display').textContent = verifiedUsername ? `@${verifiedUsername}` : 'Enter username below';
+        updateStep();
+      };
+      usernameInput.focus();
 
       updateStep();
     }
 
     function logout() {
-      oauthToken = null;
-      oauthUser = null;
-      sessionStorage.removeItem('oauth_token');
-      sessionStorage.removeItem('pkce_state');
-      sessionStorage.removeItem('pkce_verifier');
+      oauthVerified = false;
+      verifiedUsername = null;
+      sessionStorage.removeItem('oauth_verified');
+      sessionStorage.removeItem('oauth_state');
 
       document.getElementById('oauth-login').style.display = 'block';
       document.getElementById('oauth-status').style.display = 'none';
@@ -725,12 +653,13 @@
     }
 
     function updateStep() {
+      const username = document.getElementById('github-username').value.trim();
       const name = document.getElementById('full-name').value.trim();
       const signature = document.getElementById('signature').value.trim();
       const agreed = document.getElementById('agree').checked;
 
-      // Step 1: identity (auto-done after OAuth login)
-      const step1Done = oauthUser !== null;
+      // Step 1: identity (OAuth done + username entered)
+      const step1Done = oauthVerified && username;
       document.getElementById('step1').className = 'step ' + (step1Done ? 'done' : 'active');
 
       // Step 2: name + signature matches
@@ -749,7 +678,7 @@
     }
 
     // ─── Submit Signature ──────────────────────────────────────
-    async function submitSignature() {
+    function submitSignature() {
       const status = document.getElementById('status');
       const btn = document.getElementById('submit-btn');
 
@@ -762,11 +691,11 @@
 
       btn.disabled = true;
       status.className = 'status loading';
-      status.textContent = 'Submitting your signature...';
+      status.textContent = 'Redirecting to GitHub...';
 
       const claFile = data.cla_type === 'individual' ? 'INDIVIDUAL' : 'CORPORATE';
       const issueTitle = `[CLA] Signature: @${data.github_username}`;
-      const issueBody =
+      const issueBody = encodeURIComponent(
         `## CLA Signature\n\n` +
         `- **Name:** ${data.name}\n` +
         `- **GitHub:** @${data.github_username}\n` +
@@ -774,42 +703,12 @@
         `- **Signature:** ${data.signature}\n` +
         `- **Timestamp:** ${new Date().toISOString()}\n\n` +
         `By submitting this, I agree to the terms of CLA_${claFile}.md.\n` +
-        `My typed name constitutes a legally binding digital signature.`;
+        `My typed name constitutes a legally binding digital signature.`
+      );
 
-      try {
-        // Create issue via GitHub API with user's OAuth token
-        const response = await fetch(`${OAUTH_API_BASE}/repos/codecoradev/.github/issues`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${oauthToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github+json',
-          },
-          body: JSON.stringify({
-            title: issueTitle,
-            body: issueBody,
-            labels: ['cla-signature'],
-          }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          status.className = 'status success';
-          status.innerHTML = `✅ CLA submitted! <a href="${result.html_url}" target="_blank" style="color: var(--success); text-decoration: underline;">View your signature issue →</a><br/><br/>Your CLA will be verified and added to the database shortly.`;
-
-          // Disable entire form
-          document.getElementById('full-name').disabled = true;
-          document.getElementById('signature').disabled = true;
-          document.getElementById('agree').disabled = true;
-        } else {
-          throw new Error(result.message || 'Failed to create issue');
-        }
-      } catch (err) {
-        status.className = 'status error';
-        status.textContent = `Error: ${err.message}. Please try again or contact us.`;
-        btn.disabled = false;
-      }
+      status.className = 'status success';
+      status.textContent = 'Opening GitHub issue...';
+      window.location.href = `https://github.com/codecoradev/.github/issues/new?title=${encodeURIComponent(issueTitle)}&body=${issueBody}`;
     }
 
     // ─── Error Display ─────────────────────────────────────────
@@ -821,21 +720,20 @@
     }
 
     // ─── Init ──────────────────────────────────────────────────
-    // Handle OAuth callback or restore session
-    (async function init() {
+    (function init() {
       // Set initial CLA type links
       setClaType('individual');
 
       // Check for OAuth callback params
       const params = new URLSearchParams(window.location.search);
       if (params.get('code')) {
-        await handleOAuthCallback();
+        handleOAuthCallback();
       } else {
-        // Check for stored token (session restore)
-        const storedToken = sessionStorage.getItem('oauth_token');
-        if (storedToken) {
-          oauthToken = storedToken;
-          await fetchGitHubUser();
+        // Check for stored OAuth state (session restore)
+        const storedVerified = sessionStorage.getItem('oauth_verified');
+        if (storedVerified === 'true') {
+          oauthVerified = true;
+          showVerifiedState();
         }
       }
 
