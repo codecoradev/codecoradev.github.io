@@ -810,10 +810,14 @@
             'Content-Type': 'application/json',
             'Accept': 'application/vnd.github+json',
           },
+          // No labels in this request: contributors authenticate with a
+          // non-push token, and GitHub rejects the whole call with 403
+          // "You do not have permission to create labels" when the label
+          // does not exist yet. The cla-sync workflow in codecoradev/.github
+          // applies the cla-signature label server-side instead.
           body: JSON.stringify({
             title: issueTitle,
             body: issueBody,
-            labels: ['cla-signature'],
           }),
         });
 
